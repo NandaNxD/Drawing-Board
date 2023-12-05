@@ -1,0 +1,15 @@
+<div class="top-container">
+  <div class="drawing-board-parent">
+    <canvas id="drawingBoard"></canvas>
+  </div>
+  <hr>
+  <div class="tools">
+    <mat-icon *ngFor="let tool of toolsList" [fontIcon]="tool.fontIcon" [matTooltip]="tool.toolTipText" class="icon" matTooltipPosition="above"  [ngClass]="{'active-tool':activeTool==tool.toolName,'hidden':!tool.visibility}" (click)="selectTool(tool.toolName)"></mat-icon>
+  </div>
+  <div class="sub-tools">
+      <input *ngIf="rangeToolEnabled" type="range" [min]="rangeMin" [max]="rangeMax" [(ngModel)]="rangeValue" (input)="rangeChange()"> 
+      <div class="colors-container" *ngIf="colorsToolEnabled">
+      <div *ngFor="let color of colors" fontIcon="circle" [ngStyle]="{'background':color}" [ngClass]="{'active-border':selectedColor===color,'inactive-border':selectedColor!==color}"  class="colors icon" (click)="selectColor(color)"></div>
+      </div>
+  </div>
+</div>

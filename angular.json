@@ -30,6 +30,7 @@
               "src/assets"
             ],
             "styles": [
+              "@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -39,6 +40,7 @@
               "vendorChunk":false,
               "buildOptimizer": true,
               "optimization": true,
+              "aot": true,
               "budgets": [
                 {
                   "type": "initial",
@@ -96,6 +98,7 @@
               "src/assets"
             ],
             "styles": [
+              "@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
             ],
             "scripts": []
