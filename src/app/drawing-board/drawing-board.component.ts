@@ -52,8 +52,8 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
   /**
    * Sub tool variables
    */
-  rangeToolEnabled=true;
-  colorsToolEnabled=true;
+  rangeToolEnabled=false;
+  colorsToolEnabled=false;
 
   selectedBorderColor='blue';
   selectedFillColor='blue';
@@ -142,15 +142,13 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
         strokeWidth:2,
         left:this.shapeMouseDownStartX,
         top:this.shapeMouseDownStartY,
-        width:0,
-        height:0,
-        angle:0
       })
       if(!event.pointer?.x){
         console.error('Mouse Down Event Error in Rectangle Tool in: canvasMouseDownHandler');
       }
       this.canvas.add(this.rectangleRef);
-      this.isMouseDown=true;
+    
+      this.canvas.requestRenderAll();
     }
     else if(this.activeTool==this.toolsList[6].toolName){
       /**
@@ -166,8 +164,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
         stroke:this.selectedBorderColor,
         left:this.shapeMouseDownStartX,
         top:this.shapeMouseDownStartY,
-        width:0,
-        height:0,
+        radius:0
       })
       this.canvas.add(this.circleRef);
       this.canvas.requestRenderAll();
@@ -176,6 +173,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
       }
       
     }
+    this.isMouseDown=true;
   }
 
   canvasMouseMoveHandler(event:fabric.IEvent<MouseEvent>){
@@ -189,23 +187,25 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
         console.log(ptr.x,ptr.y,this.shapeMouseDownStartX,this.shapeMouseDownStartY)
         if(this.rectangleRef){
           let pointer=this.canvas.getPointer(event.e)
+
           if((pointer.x)<this.shapeMouseDownStartX){
-            this.rectangleRef.set({left:Math.abs(pointer.x)})
+            this.rectangleRef.set({left:pointer.x})
           }
           else{
             this.rectangleRef.set({left:this.shapeMouseDownStartX});
           }
     
           if((pointer.y)<this.shapeMouseDownStartY){
-            this.rectangleRef.set({top:Math.abs(pointer.y)});
+            this.rectangleRef.set({top:pointer.y});
           }
           else{
             this.rectangleRef.set({top:this.shapeMouseDownStartY});
           }
     
-          this.rectangleRef.width=Math.abs(pointer.x-this.shapeMouseDownStartX);
-          this.rectangleRef.height=Math.abs(pointer.y-this.shapeMouseDownStartY);
-          this.canvas.renderAll();
+          this.rectangleRef.set('width',Math.abs(pointer.x-this.shapeMouseDownStartX));
+          this.rectangleRef.set('height',Math.abs(pointer.y-this.shapeMouseDownStartY));
+
+          this.canvas.requestRenderAll();          
         }
         else{
           console.error('No Rectangle Ref in : canvasMouseMoveHandler');
@@ -217,23 +217,30 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
         /**
          * Circle tool
          */
+
+        let ptr=this.canvas.getPointer(event.e);
+        console.log(ptr.x,ptr.y,this.shapeMouseDownStartX,this.shapeMouseDownStartY)
+         
         if(this.circleRef){
-          if((event.pointer?.x!)<this.shapeMouseDownStartX){
-            this.circleRef.left=event.pointer?.x;
+
+          let pointer=this.canvas.getPointer(event.e)
+
+          if((pointer.x)<this.shapeMouseDownStartX){
+            this.circleRef.set({left:pointer.x})
           }
           else{
-            this.circleRef.left=this.shapeMouseDownStartX;
+            this.circleRef.set({left:this.shapeMouseDownStartX});
           }
     
-          if((event.pointer?.y!)<this.shapeMouseDownStartY){
-            this.circleRef.top=event.pointer?.y;
+          if((pointer.y)<this.shapeMouseDownStartY){
+            this.circleRef.set({top:pointer.y});
           }
           else{
-            this.circleRef.top=this.shapeMouseDownStartY;
+            this.circleRef.set({top:this.shapeMouseDownStartY});
           }
     
-          this.circleRef.width=Math.abs(event.pointer?.x!-this.shapeMouseDownStartX)/2;
-          this.circleRef.height=Math.abs(event.pointer?.y!-this.shapeMouseDownStartY)/2;
+          this.circleRef.set('radius',Math.abs(pointer.x-this.shapeMouseDownStartX)/2);
+          //this.circleRef.set('height',Math.abs(pointer.y-this.shapeMouseDownStartY)/2);
           this.canvas.requestRenderAll();
         }
         else{
@@ -286,9 +293,8 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
        */
       this.canvas.isDrawingMode=false;
       this.rangeToolEnabled=false;
-      this.colorsToolEnabled=true;
+      this.colorsToolEnabled=false;
       
-
     }
     else if(toolName==this.toolsList[1].toolName){
       /**
