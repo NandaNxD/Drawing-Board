@@ -10,5 +10,6 @@
       <div class="colors-container" *ngIf="colorsToolEnabled">
       <div *ngFor="let color of colors" fontIcon="circle" [ngStyle]="{'background':color}" [ngClass]="{'active-border':selectedColor===color,'inactive-border':selectedColor!==color}"  class="colors icon" (click)="selectColor(color)"></div>
       </div>
+      <input type="file" id="fileInput" class="hidden" (change)="handleFileInput($event)">
   </div>
 </div>

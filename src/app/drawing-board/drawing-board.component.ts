@@ -12,6 +12,8 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
   canvas!:fabric.Canvas;
   vpt:number[]=[]
 
+  canvasBgImage!:fabric.Image;
+
   toolsList=[ 
     {fontIcon:'back_hand', toolTipText:'Select', toolName:'select',visibility:true},
     {fontIcon:'edit', toolTipText:'Pencil',toolName:'pencil',visibility:true},
@@ -21,7 +23,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
     {fontIcon:'rectangle', toolTipText:'Rectangle',toolName:'rectangle',visibility:true},
     {fontIcon:'circle', toolTipText:'Circle',toolName:'circle',visibility:true},
     {fontIcon:'delete', toolTipText:'Delete',toolName:'delete',visibility:true},
-    {fontIcon:'upload', toolTipText:'Upload Background Image',toolName:'upload',visibility:false},
+    {fontIcon:'upload', toolTipText:'Upload Background Image',toolName:'upload',visibility:true},
     {fontIcon:'download', toolTipText:'Download',toolName:'download',visibility:true},
     {fontIcon:'undo', toolTipText:'Undo',toolName:'undo',visibility:false},
     {fontIcon:'redo', toolTipText:'Redo',toolName:'redo',visibility:false},
@@ -80,6 +82,12 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
 
   resizeHandler(){
     if(this.canvas){
+      if(this.canvasBgImage){
+        this.canvas.setBackgroundImage(this.canvasBgImage, this.canvas.renderAll.bind(this.canvas), {
+          scaleX: this.canvas.width! / this.canvasBgImage.width!,
+          scaleY: this.canvas.height! / this.canvasBgImage.height!
+        }).requestRenderAll();
+      }
       this.canvas.setDimensions({width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage})
     }
   }
@@ -220,7 +228,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
          * Rectangle tool
          */
         let ptr=this.canvas.getPointer(event.e);
-        console.log(ptr.x,ptr.y,this.shapeMouseDownStartX,this.shapeMouseDownStartY)
+
         if(this.rectangleRef){
           let pointer=this.canvas.getPointer(event.e)
 
@@ -255,7 +263,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
          */
 
         let ptr=this.canvas.getPointer(event.e);
-        console.log(ptr.x,ptr.y,this.shapeMouseDownStartX,this.shapeMouseDownStartY)
+        
          
         if(this.circleRef){
 
@@ -417,6 +425,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
       /**
        * Upload Too1
        */
+      document.getElementById('fileInput')?.click();
+      this.selectTool(this.toolsList[0].toolName);
+
 
     }
     else if(toolName==this.toolsList[9].toolName){
@@ -430,11 +441,6 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
         format: 'jpeg',
         quality: 1,
       })
-      // dt = dt.replace(/^data:image\/[^;]*/, 'data:application/octet-stream')
-      // dt = dt.replace(
-      //   /^data:application\/octet-stream/,
-      //   'data:application/octet-stream;headers=Content-Disposition%3A%20attachment%3B%20filename=Canvas.png',
-      // )
 
       a.href = dt
       a.download = 'canvas.jpeg'
@@ -555,6 +561,38 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
   setFreeDrawingBrushSettings(color:string,width:number){
     this.canvas.freeDrawingBrush.color=color;
     this.canvas.freeDrawingBrush.width=width;
+  }
+
+  handleFileInput(event:Event){
+    let eventTarget:any=event.target;
+    
+    let uploadedFile=eventTarget.files[0] as File;
+
+    if(uploadedFile.type.toString().toLowerCase().includes('image')){
+
+      console.log(uploadedFile)
+
+      let reader = new FileReader();
+      reader.onload=(event)=>{ 
+        let data=(event.target?.result) as string
+
+        fabric.Image.fromURL(data, (img)=>{
+          // add background image
+          this.canvasBgImage=img;
+          this.canvas.setBackgroundImage(img, this.canvas.renderAll.bind(this.canvas), {
+            scaleX: this.canvas.width! / img.width!,
+            scaleY: this.canvas.height! / img.height!
+          }).requestRenderAll();
+        })
+
+      }
+
+      reader.readAsDataURL(uploadedFile);
+
+    }    
+
+    
+
   }
 
 
