@@ -139,7 +139,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
         originY:'top',
         fill:this.selectedFillColor,
         stroke:this.selectedBorderColor,
-        strokeWidth:2,
+        strokeWidth:5,
         left:this.shapeMouseDownStartX,
         top:this.shapeMouseDownStartY,
       })
@@ -162,6 +162,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
       this.circleRef=new fabric.Circle({
         fill:this.selectedFillColor,
         stroke:this.selectedBorderColor,
+        strokeWidth:5,
         left:this.shapeMouseDownStartX,
         top:this.shapeMouseDownStartY,
         radius:0
@@ -232,12 +233,12 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
             this.circleRef.set({left:this.shapeMouseDownStartX});
           }
     
-          if((pointer.y)<this.shapeMouseDownStartY){
-            this.circleRef.set({top:pointer.y});
-          }
-          else{
-            this.circleRef.set({top:this.shapeMouseDownStartY});
-          }
+          // if((pointer.y)<this.shapeMouseDownStartY){
+          //   this.circleRef.set({top:pointer.y});
+          // }
+          // else{
+          //   this.circleRef.set({top:this.shapeMouseDownStartY});
+          // }
     
           this.circleRef.set('radius',Math.abs(pointer.x-this.shapeMouseDownStartX)/2);
           //this.circleRef.set('height',Math.abs(pointer.y-this.shapeMouseDownStartY)/2);
@@ -434,12 +435,37 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
        * Fill Color tool
        */
       this.selectedFillColor=color;
+      for(let activeObject of this.canvas.getActiveObjects()){
+        if(activeObject.type=='i-text'){
+          activeObject.set('fill',color);
+        }
+        if(activeObject.type=='path'){
+          activeObject.set('stroke',color);
+        }
+        if(activeObject.type=='circle'){
+          activeObject.set('fill',color);
+        }
+        if(activeObject.type=='rect'){
+          activeObject.set('fill',color);
+        }
+      }
+      this.canvas.requestRenderAll();
     }
     if(this.activeTool===this.toolsList[4].toolName){
       /**
        * Border Color tool
        */
       this.selectedBorderColor=color;
+      for(let activeObject of this.canvas.getActiveObjects()){
+        if(activeObject.type=='circle'){
+          activeObject.set('stroke',color);
+        }
+        if(activeObject.type=='rect'){
+          activeObject.set('stroke',color);
+        }
+      }
+      this.canvas.requestRenderAll();
+
     }
     if(this.activeTool===this.toolsList[5].toolName || this.activeTool===this.toolsList[6].toolName){
       /**
