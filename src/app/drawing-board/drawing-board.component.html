@@ -2,7 +2,6 @@
   <div class="drawing-board-parent">
     <canvas id="drawingBoard"></canvas>
   </div>
-  <hr>
   <div class="tools">
     <mat-icon *ngFor="let tool of toolsList" [fontIcon]="tool.fontIcon" [matTooltip]="tool.toolTipText" class="icon" matTooltipPosition="above"  [ngClass]="{'active-tool':activeTool==tool.toolName,'hidden':!tool.visibility}" (click)="selectTool(tool.toolName)"></mat-icon>
   </div>
