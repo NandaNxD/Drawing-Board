@@ -1,4 +1,5 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { withNoHttpTransferCache } from '@angular/platform-browser';
 import { fabric } from "fabric";
 import { log } from 'fabric/fabric-impl';
 
@@ -8,7 +9,8 @@ import { log } from 'fabric/fabric-impl';
   styleUrls: ['./drawing-board.component.scss']
 })
 export class DrawingBoardComponent implements OnInit,AfterViewInit {
-  canvas!:fabric.Canvas
+  canvas!:fabric.Canvas;
+  vpt:number[]=[]
 
   toolsList=[ 
     {fontIcon:'back_hand', toolTipText:'Select', toolName:'select',visibility:true},
@@ -21,13 +23,17 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
     {fontIcon:'delete', toolTipText:'Delete',toolName:'delete',visibility:true},
     {fontIcon:'upload', toolTipText:'Upload Background Image',toolName:'upload',visibility:false},
     {fontIcon:'download', toolTipText:'Download',toolName:'download',visibility:true},
-    {fontIcon:'undo', toolTipText:'Undo',toolName:'undo',visibility:true},
-    {fontIcon:'redo', toolTipText:'Redo',toolName:'redo',visibility:true},
+    {fontIcon:'undo', toolTipText:'Undo',toolName:'undo',visibility:false},
+    {fontIcon:'redo', toolTipText:'Redo',toolName:'redo',visibility:false},
+    {fontIcon:'info', toolTipText:'Press Alt Key+Drag to move canvas around',toolName:'info',visibility:true}
   ]
 
   activeTool='select';
   drawingMode=false;
   colors=['red','green','purple','yellow','blue','white','black']
+
+  lastPosX=0;
+  lastPosY=0;
 
   /**
    * Size related variables
@@ -93,7 +99,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
     /**
      * Fabric Init
      */
-    this.canvas=new fabric.Canvas('drawingBoard',{width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage,isDrawingMode:this.drawingMode});
+    this.canvas=new fabric.Canvas('drawingBoard',{width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage,isDrawingMode:this.drawingMode,backgroundColor:'white'});
     /**
     * Free Drawing Brush settings
     */
@@ -104,11 +110,25 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
       this.canvas.on('mouse:up',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseUpHandler(event));
       this.canvas.on('mouse:move',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseMoveHandler(event));
     }
-    
-    
+
   }
 
+
   canvasMouseDownHandler(event:fabric.IEvent<MouseEvent>){
+    // Trying to detect canvas drag move
+    if(event.e.altKey && this.activeTool==this.toolsList[0].toolName){
+      this.isMouseDown=true;
+
+      this.canvas.discardActiveObject().renderAll()
+
+      let evt = event.e;
+    
+      this.lastPosX = evt.clientX;
+      this.lastPosY = evt.clientY;
+
+      this.selectTool(this.toolsList[0].toolName);
+      return;
+    }
     if(this.activeTool==this.toolsList[2].toolName){
       /**
        * Text tool
@@ -178,6 +198,21 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
   }
 
   canvasMouseMoveHandler(event:fabric.IEvent<MouseEvent>){
+
+    if(this.isMouseDown && event.e.altKey && this.activeTool==this.toolsList[0].toolName){
+      let e = event.e;
+
+      this.vpt = this.canvas.viewportTransform as number[];
+      if(this.vpt){
+        this.vpt[4] += e.clientX - this.lastPosX;
+        this.vpt[5] += e.clientY - this.lastPosY;
+      }
+     
+      this.canvas.requestRenderAll();
+      this.lastPosX = e.clientX;
+      this.lastPosY = e.clientY;
+      return;
+    }
     
     if(this.isMouseDown){
       if(this.activeTool==this.toolsList[5].toolName){
@@ -255,6 +290,14 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
 
   canvasMouseUpHandler(event:fabric.IEvent<MouseEvent>){
     this.isMouseDown=false;
+
+    if(event.e.altKey && this.activeTool==this.toolsList[0].toolName){
+      this.canvas.setViewportTransform(this.vpt);
+      this.canvas.selection=true;
+      this.canvas.requestRenderAll();
+      return;
+    }
+
     if(this.activeTool==this.toolsList[5].toolName){
       /**
        * Rectangle tool
@@ -286,6 +329,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
   }
 
   selectTool(toolName:string){
+    if(toolName=='info'){
+      return;
+    }
     this.activeTool=toolName;
 
     if(toolName==this.toolsList[0].toolName){
@@ -511,6 +557,5 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
     this.canvas.freeDrawingBrush.width=width;
   }
 
-  
 
 }
