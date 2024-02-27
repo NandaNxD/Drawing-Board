@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { withNoHttpTransferCache } from '@angular/platform-browser';
 import { fabric } from "fabric";
 import { log } from 'fabric/fabric-impl';
@@ -8,7 +8,41 @@ import { log } from 'fabric/fabric-impl';
   templateUrl: './drawing-board.component.html',
   styleUrls: ['./drawing-board.component.scss']
 })
-export class DrawingBoardComponent implements OnInit,AfterViewInit {
+export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
+
+  constructor(){
+    window.addEventListener('resize',()=>{
+      this.resizeHandler();
+    })
+  }
+  
+  ngOnInit(): void {
+   
+  }
+
+  ngAfterViewInit(): void {
+    /**
+     * Fabric Init
+     */
+    this.canvas=new fabric.Canvas('drawingBoard',{width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage,isDrawingMode:this.drawingMode,backgroundColor:'white'});
+    /**
+    * Free Drawing Brush settings
+    */
+    this.setFreeDrawingBrushSettings(this.selectedColor,this.rangeValue);
+    // Handle Mouse Events on Fabric
+    if(this.canvas){
+      this.canvas.on('mouse:down',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseDownHandler(event));
+      this.canvas.on('mouse:up',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseUpHandler(event));
+      this.canvas.on('mouse:move',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseMoveHandler(event));
+    }
+  }
+
+  
+  ngOnDestroy(): void {
+    
+  }
+  
+
   canvas!:fabric.Canvas;
   vpt:number[]=[]
 
@@ -78,7 +112,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
   isMouseDown=false;
 
   canvasScreenWidthPercentage=100/100;
-  canvasScreenHeightPercentage=85/100;
+  canvasScreenHeightPercentage=87/100;
 
   resizeHandler(){
     if(this.canvas){
@@ -91,36 +125,6 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit {
       this.canvas.setDimensions({width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage})
     }
   }
-
-  constructor(){
-    window.addEventListener('resize',()=>{
-      this.resizeHandler();
-    })
-  }
-  
-  ngOnInit(): void {
-   
-  }
-
-
-  ngAfterViewInit(): void {
-    /**
-     * Fabric Init
-     */
-    this.canvas=new fabric.Canvas('drawingBoard',{width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage,isDrawingMode:this.drawingMode,backgroundColor:'white'});
-    /**
-    * Free Drawing Brush settings
-    */
-    this.setFreeDrawingBrushSettings(this.selectedColor,this.rangeValue);
-    // Handle Mouse Events on Fabric
-    if(this.canvas){
-      this.canvas.on('mouse:down',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseDownHandler(event));
-      this.canvas.on('mouse:up',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseUpHandler(event));
-      this.canvas.on('mouse:move',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseMoveHandler(event));
-    }
-
-  }
-
 
   canvasMouseDownHandler(event:fabric.IEvent<MouseEvent>){
     // Trying to detect canvas drag move
