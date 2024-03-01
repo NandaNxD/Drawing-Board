@@ -3,7 +3,7 @@
     <canvas id="drawingBoard"></canvas>
   </div>
   <div class="tools">
-    <mat-icon *ngFor="let tool of toolsList" [fontIcon]="tool.fontIcon" [matTooltip]="tool.toolTipText" class="icon" matTooltipPosition="above"  [ngClass]="{'active-tool':activeTool==tool.toolName,'hidden':!tool.visibility}" (click)="selectTool(tool.toolName)"></mat-icon>
+    <mat-icon *ngFor="let tool of toolsList" [fontIcon]="tool.fontIcon" [matTooltip]="tool.toolTipText" class="icon" matTooltipPosition="above"  [ngClass]="{'active-tool':activeTool==tool.toolName,'hidden':!tool.visibility,'arrow-tool':tool.toolName=='select'}" (click)="selectTool(tool.toolName)"></mat-icon>
   </div>
   <div class="sub-tools">
       <input *ngIf="rangeToolEnabled" type="range" [min]="rangeMin" [max]="rangeMax" [(ngModel)]="rangeValue" (input)="rangeChange()"> 

@@ -2,6 +2,11 @@ import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { withNoHttpTransferCache } from '@angular/platform-browser';
 import { fabric } from "fabric";
 import { log } from 'fabric/fabric-impl';
+import { v1 as uuid } from 'uuid'
+import { FirebaseApp, initializeApp } from 'firebase/app';
+import { Database, Unsubscribe, getDatabase, onChildAdded, onChildChanged, onDisconnect, push, ref, set} from 'firebase/database';
+import { FirebaseService } from '../services/firebase.service';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-drawing-board',
@@ -10,7 +15,21 @@ import { log } from 'fabric/fabric-impl';
 })
 export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
-  constructor(){
+  constructor(private firebaseService:FirebaseService,private activatedRouter:ActivatedRoute,private router:Router){
+
+    if(activatedRouter.snapshot.queryParams['roomId']){
+      this.roomId=activatedRouter.snapshot.queryParams['roomId'];
+    }
+
+    this.firebaseApp=initializeApp(this.firebaseService.firebaseConfig);
+    
+    this.realtimeDb=getDatabase();
+
+    if(this.roomId){
+      this.setUserId();
+      onDisconnect(ref(this.realtimeDb,`Whiteboard/${this.roomId}`)).set(null);
+    }
+
     window.addEventListener('resize',()=>{
       this.resizeHandler();
     })
@@ -24,7 +43,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     /**
      * Fabric Init
      */
-    this.canvas=new fabric.Canvas('drawingBoard',{width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage,isDrawingMode:this.drawingMode,backgroundColor:'white'});
+    this.canvas=new fabric.Canvas('drawingBoard',{width:window.innerWidth*this.canvasScreenWidthPercentage,height:window.innerHeight*this.canvasScreenHeightPercentage,isDrawingMode:this.drawingMode,backgroundColor:'white',selection:false});
     /**
     * Free Drawing Brush settings
     */
@@ -34,22 +53,41 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.canvas.on('mouse:down',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseDownHandler(event));
       this.canvas.on('mouse:up',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseUpHandler(event));
       this.canvas.on('mouse:move',(event:fabric.IEvent<MouseEvent>)=>this.canvasMouseMoveHandler(event));
+
+      if(this.roomId)
+      this.listenToObjectEvents();
+
+      if(this.roomId)
+      this.listenToPeerChanges();
+
     }
   }
 
   
   ngOnDestroy(): void {
-    
+   this.unsubscribeSubscriptions();
   }
-  
+
+  userId:string='';
+  roomId:string='';
+
+  firebaseApp!:FirebaseApp;
+  realtimeDb!:Database;
+
+  objectAdditionUnsubscribe!:Unsubscribe;
+  objectModifiedUnsubscribe!:Unsubscribe;
+  objectRemovedUnsubscribe!:Unsubscribe;
 
   canvas!:fabric.Canvas;
   vpt:number[]=[]
 
   canvasBgImage!:fabric.Image;
 
-  toolsList=[ 
-    {fontIcon:'back_hand', toolTipText:'Select', toolName:'select',visibility:true},
+  requiredKeys=['id','userId','key'];
+
+  toolsList=[
+    // {fontIcon:'back_hand', toolTipText:'hand', toolName:'hand',visibility:false},
+    {fontIcon:'arrow_back', toolTipText:'Select', toolName:'select',visibility:true},
     {fontIcon:'edit', toolTipText:'Pencil',toolName:'pencil',visibility:true},
     {fontIcon:'title', toolTipText:'Text',toolName:'text',visibility:true},
     {fontIcon:'format_color_fill', toolTipText:'Fill Color',toolName:'fill_color',visibility:true},
@@ -57,11 +95,11 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     {fontIcon:'rectangle', toolTipText:'Rectangle',toolName:'rectangle',visibility:true},
     {fontIcon:'circle', toolTipText:'Circle',toolName:'circle',visibility:true},
     {fontIcon:'delete', toolTipText:'Delete',toolName:'delete',visibility:true},
-    {fontIcon:'upload', toolTipText:'Upload Background Image',toolName:'upload',visibility:true},
+    {fontIcon:'upload', toolTipText:'Upload Background Image',toolName:'upload',visibility:false},
     {fontIcon:'download', toolTipText:'Download',toolName:'download',visibility:true},
     {fontIcon:'undo', toolTipText:'Undo',toolName:'undo',visibility:false},
     {fontIcon:'redo', toolTipText:'Redo',toolName:'redo',visibility:false},
-    {fontIcon:'info', toolTipText:'Press Alt Key+Drag to move canvas around',toolName:'info',visibility:true}
+    {fontIcon:'info', toolTipText:'Press Alt Key+Drag to move canvas around',toolName:'info',visibility:false}
   ]
 
   activeTool='select';
@@ -114,6 +152,213 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
   canvasScreenWidthPercentage=100/100;
   canvasScreenHeightPercentage=87/100;
 
+
+  setUserId(){
+    this.userId=push(ref(this.realtimeDb,'Whiteboard')).key as string;
+  }
+
+
+  changeRoom(){
+    this.unsubscribeSubscriptions();
+    
+    this.listenToObjectEvents();
+
+    this.listenToPeerChanges();
+
+  }
+
+
+  listenToPeerChanges(){
+    this.unsubscribeSubscriptions();
+
+    this.objectAdditionUnsubscribe=onChildAdded(ref(this.realtimeDb,`Whiteboard/${this.roomId}/Added`),(snapshot)=>{
+      if(snapshot.val().userId==this.userId)return;
+      
+      console.log(snapshot.val());
+
+      fabric.util.enlivenObjects([snapshot.val()] as any[],(enlivenedObjects:any[])=>{
+        if(enlivenedObjects[0].type=='path')
+        enlivenedObjects[0].set('fill','rgba(0,0,0,0)')
+
+        if(!enlivenedObjects[0].styles){
+          enlivenedObjects[0].styles=[];
+        }
+
+        this.canvas.add(enlivenedObjects[0]);
+        this.canvas.renderAll();
+
+        enlivenedObjects[0].set('userId',this.userId);
+      },'')
+
+      this.canvas.requestRenderAll();
+
+     
+    })
+
+    this.objectModifiedUnsubscribe=onChildChanged(ref(this.realtimeDb,`Whiteboard/${this.roomId}/Added`),(snapshot)=>{
+      if(snapshot.val().userId==this.userId)return;
+      console.log(snapshot.val());
+      this.canvas.getObjects().forEach((object)=>{
+        let json=snapshot.val() as any;
+
+        let alreadyAddedCanvasObject:any=object;
+        console.log(alreadyAddedCanvasObject);
+       
+
+        if(json.id==alreadyAddedCanvasObject.key){
+          Object.keys(json).forEach((key)=>{
+            console.log('ok');
+            object.set(key as keyof fabric.Object,json[key]);   
+          })
+        }
+
+
+        this.canvas.discardActiveObject()
+
+        alreadyAddedCanvasObject.setCoords();
+    
+
+        alreadyAddedCanvasObject.set('userId',this.userId);
+        
+        this.canvas.requestRenderAll();
+      })
+    })
+
+    this.objectRemovedUnsubscribe=onChildAdded(ref(this.realtimeDb,`Whiteboard/${this.roomId}/Removed`),(snapshot)=>{
+      if(snapshot.val().userId==this.userId)return;
+
+      this.canvas.remove(this.canvas.getObjects().find((obj:any)=>{
+        return obj.id===snapshot.val().id;
+      }) as fabric.Object);
+
+      this.canvas.requestRenderAll();
+      console.log(snapshot.val());
+    })
+  }
+
+
+  listenToObjectEvents(){
+    this.removeCanvasObjectEventListeners();
+
+    this.canvas.on('object:added',(event:fabric.IEvent<MouseEvent>)=>{
+      let object=event.target as any;
+
+      if(object.userId!=this.userId && object.userId){
+        return;
+      }
+
+      console.log('Object Added',event.target);
+      let pushRef=push(ref(this.realtimeDb,`Whiteboard/${this.roomId}/Added`));
+      
+      let key=pushRef.key as string;
+
+      let targetObject:any=event.target;
+
+      targetObject.id=key;
+      targetObject.userId=this.userId;
+      targetObject.key=key;
+
+      console.log(targetObject,targetObject.toJSON(this.requiredKeys));
+
+      set(pushRef,targetObject.toJSON(this.requiredKeys));
+
+    })
+
+    this.canvas.on('object:modified',(event:fabric.IEvent<MouseEvent>)=>{
+      let object=event.target as any;
+
+      console.log('modify',object.userId,this.userId);
+
+      if(object.userId!=this.userId && object.userId){
+        return;
+      }
+
+
+      console.log('Object Modified',event.target);
+
+      console.log(object._objects);
+
+      if(false){
+        object._objects.forEach((targetObject:any)=>{
+
+          console.log(targetObject);
+
+          targetObject.userId=this.userId;
+    
+          console.log(targetObject,targetObject.toJSON(this.requiredKeys));
+
+          let objectLeft = targetObject.left
+          let objectTop = targetObject.top
+          let groupLeft = object.left
+          let groupTop = object.top
+          let objectInGroupLeft = objectLeft + groupLeft + object.width / 2
+          let objectInGroupTop = objectTop + groupTop + object.height / 2
+
+          let json=targetObject.toJSON(this.requiredKeys);
+          json['left']=objectInGroupLeft;
+          json['top']=objectInGroupTop;
+    
+    
+          set((ref(this.realtimeDb,`Whiteboard/${this.roomId}/Added/${targetObject.key}`)),json);
+        })
+      }
+      else{
+        let targetObject:any=event.target;
+        targetObject.userId=this.userId;
+  
+        console.log(targetObject.toJSON);
+
+        console.log(targetObject,targetObject.toJSON(this.requiredKeys));
+
+        console.log(4);
+  
+  
+        set((ref(this.realtimeDb,`Whiteboard/${this.roomId}/Added/${targetObject.key}`)),targetObject.toJSON(this.requiredKeys));
+      }
+
+
+    })
+
+    this.canvas.on('object:removed',(event:fabric.IEvent<MouseEvent>)=>{
+      let object=event.target as any;
+
+      if(object.userId!=this.userId && object.userId){
+        return;
+      }
+
+      let targetObject:any=event.target;
+
+      targetObject.userId=this.userId;
+
+      console.log(targetObject,targetObject.toJSON(this.requiredKeys));
+
+      set(push(ref(this.realtimeDb,`Whiteboard/${this.roomId}/Removed`)),targetObject.toJSON(this.requiredKeys));
+
+      console.log(targetObject);
+    })
+  }
+
+
+  removeCanvasObjectEventListeners(){
+    this.canvas.off('object:added');
+    this.canvas.off('object:modified');
+    this.canvas.off('object:removed');
+  }
+
+
+
+  unsubscribeSubscriptions(){
+    if(this.objectAdditionUnsubscribe)
+    this.objectAdditionUnsubscribe();
+
+    if(this.objectModifiedUnsubscribe)
+    this.objectModifiedUnsubscribe();
+
+    if(this.objectRemovedUnsubscribe)
+    this.objectRemovedUnsubscribe();
+  }
+
+
   resizeHandler(){
     if(this.canvas){
       if(this.canvasBgImage){
@@ -128,6 +373,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
   canvasMouseDownHandler(event:fabric.IEvent<MouseEvent>){
     // Trying to detect canvas drag move
+
     if(event.e.altKey && this.activeTool==this.toolsList[0].toolName){
       this.isMouseDown=true;
 
@@ -154,6 +400,14 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
         fill:this.selectedFillColor,
         fontSize:this.rangeValue
       }))
+
+      let text=new fabric.IText('Text',{
+        left:event.pointer?.x,
+        top:event.pointer?.y,
+        fill:this.selectedFillColor,
+        fontSize:this.rangeValue
+      })
+
       // Change Tool After Drawing Text on canvas back to Select Tool
       this.activeTool=this.toolsList[0].toolName
       this.selectTool(this.activeTool);
@@ -162,6 +416,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       /**
        * Rectangle tool
        */
+
       console.log('Rectangle tool');
       this.shapeMouseDownStartX=this.canvas.getPointer(event.e).x;
       this.shapeMouseDownStartY=this.canvas.getPointer(event.e).y;
@@ -253,6 +508,8 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
           this.rectangleRef.set('width',Math.abs(pointer.x-this.shapeMouseDownStartX));
           this.rectangleRef.set('height',Math.abs(pointer.y-this.shapeMouseDownStartY));
 
+          this.rectangleRef.setCoords();
+
           this.canvas.requestRenderAll();          
         }
         else{
@@ -280,15 +537,11 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
             this.circleRef.set({left:this.shapeMouseDownStartX});
           }
     
-          // if((pointer.y)<this.shapeMouseDownStartY){
-          //   this.circleRef.set({top:pointer.y});
-          // }
-          // else{
-          //   this.circleRef.set({top:this.shapeMouseDownStartY});
-          // }
     
           this.circleRef.set('radius',Math.abs(pointer.x-this.shapeMouseDownStartX)/2);
-          //this.circleRef.set('height',Math.abs(pointer.y-this.shapeMouseDownStartY)/2);
+
+          this.circleRef.setCoords();
+    
           this.canvas.requestRenderAll();
         }
         else{
@@ -305,7 +558,8 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
     if(event.e.altKey && this.activeTool==this.toolsList[0].toolName){
       this.canvas.setViewportTransform(this.vpt);
-      this.canvas.selection=true;
+     
+      
       this.canvas.requestRenderAll();
       return;
     }
@@ -319,6 +573,11 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.selectTool(this.activeTool);
       this.shapeMouseDownStartX=-1;
       this.shapeMouseDownStartY=-1;
+
+      this.rectangleRef.setCoords();
+
+      this.canvas.fire('object:modified',{target:this.rectangleRef});
+
       this.rectangleRef!=null;
     }
     else if(this.activeTool==this.toolsList[6].toolName){
@@ -330,6 +589,11 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.selectTool(this.activeTool);
       this.shapeMouseDownStartX=-1;
       this.shapeMouseDownStartY=-1;
+
+      this.circleRef.setCoords();
+
+      this.canvas.fire('object:modified',{target:this.circleRef});
+
       this.circleRef!=null;
     }
   }
@@ -344,6 +608,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     if(toolName=='info'){
       return;
     }
+
+    this.allowObjectSelection();
+
     this.activeTool=toolName;
 
     if(toolName==this.toolsList[0].toolName){
@@ -397,6 +664,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       /**
        * Rectangle Too1
        */
+
+      this.stopObjectSelection();
+
       this.canvas.isDrawingMode=false;
       this.rangeToolEnabled=true;
       this.colorsToolEnabled=true;
@@ -407,6 +677,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       /**
        * Circle Too1
        */
+
+      this.stopObjectSelection();
+      
       this.canvas.isDrawingMode=false;
       this.rangeToolEnabled=true;
       this.colorsToolEnabled=true;
@@ -418,6 +691,8 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       /**
        * Delete Too1
        */
+
+      
       for(let object of  this.canvas.getActiveObjects()){
         this.canvas.remove(object);
       }
@@ -466,6 +741,14 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
   }
 
+  allowObjectSelection(){
+    this.canvas.getObjects().forEach(obj=>{obj.set('selectable',true)});
+  }
+
+  stopObjectSelection(){
+    this.canvas.getObjects().forEach(obj=>{obj.set('selectable',false)});
+  }
+
   selectColor(color:string){
     if(this.activeTool===this.toolsList[1].toolName){
       /**
@@ -492,18 +775,26 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
        */
       this.selectedFillColor=color;
       for(let activeObject of this.canvas.getActiveObjects()){
+        let flag=0;
         if(activeObject.type=='i-text'){
           activeObject.set('fill',color);
+          flag=1;
         }
         if(activeObject.type=='path'){
           activeObject.set('stroke',color);
+          flag=1;
         }
         if(activeObject.type=='circle'){
           activeObject.set('fill',color);
+          flag=1;
         }
         if(activeObject.type=='rect'){
           activeObject.set('fill',color);
+          flag=1;
         }
+
+        if(flag)
+        this.canvas.fire('object:modified',{ target: activeObject })
       }
       this.canvas.requestRenderAll();
     }
@@ -513,12 +804,18 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
        */
       this.selectedBorderColor=color;
       for(let activeObject of this.canvas.getActiveObjects()){
+        let flag=0;
         if(activeObject.type=='circle'){
           activeObject.set('stroke',color);
+          flag=1;
         }
         if(activeObject.type=='rect'){
           activeObject.set('stroke',color);
+          flag=1;
         }
+
+        if(flag)
+        this.canvas.fire('object:modified',{ target: activeObject });
       }
       this.canvas.requestRenderAll();
 
