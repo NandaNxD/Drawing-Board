@@ -7,6 +7,7 @@ import { FirebaseApp, initializeApp } from 'firebase/app';
 import { Database, Unsubscribe, getDatabase, onChildAdded, onChildChanged, onDisconnect, push, ref, set} from 'firebase/database';
 import { FirebaseService } from '../services/firebase.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-drawing-board',
@@ -15,10 +16,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 })
 export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
-  constructor(private firebaseService:FirebaseService,private activatedRouter:ActivatedRoute,private router:Router){
+  constructor(private firebaseService:FirebaseService,private activatedRoute:ActivatedRoute,private snackbard:MatSnackBar){
 
-    if(activatedRouter.snapshot.queryParams['roomId']){
-      this.roomId=activatedRouter.snapshot.queryParams['roomId'];
+    if(activatedRoute.snapshot.queryParams['roomId']){
+      this.roomId=activatedRoute.snapshot.queryParams['roomId'];
     }
 
     this.firebaseApp=initializeApp(this.firebaseService.firebaseConfig);
@@ -26,8 +27,10 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     this.realtimeDb=getDatabase();
 
     if(this.roomId){
-      this.setUserId();
-      onDisconnect(ref(this.realtimeDb,`Whiteboard/${this.roomId}`)).set(null);
+      this.toolsList[this.toolsList.length-2].toolTipText='Share Link';
+      this.userId=this.createUserId();
+      this.toolsList[this.toolsList.length-1].visibility=true;
+      //onDisconnect(ref(this.realtimeDb,`Whiteboard/${this.roomId}`)).set(null);
     }
 
     window.addEventListener('resize',()=>{
@@ -99,7 +102,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     {fontIcon:'download', toolTipText:'Download',toolName:'download',visibility:true},
     {fontIcon:'undo', toolTipText:'Undo',toolName:'undo',visibility:false},
     {fontIcon:'redo', toolTipText:'Redo',toolName:'redo',visibility:false},
-    {fontIcon:'info', toolTipText:'Press Alt Key+Drag to move canvas around',toolName:'info',visibility:false}
+    {fontIcon:'info', toolTipText:'Press Alt Key+Drag to move canvas around',toolName:'info',visibility:false},
+    {fontIcon:'share', toolTipText:'Create Session',toolName:'share',visibility:true},
+    {fontIcon:'link_off', toolTipText:'End Session',toolName:'endSession',visibility:false},
   ]
 
   activeTool='select';
@@ -153,18 +158,55 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
   canvasScreenHeightPercentage=87/100;
 
 
-  setUserId(){
-    this.userId=push(ref(this.realtimeDb,'Whiteboard')).key as string;
+  createUserId(){
+    return push(ref(this.realtimeDb,'Whiteboard')).key as string;
+  }
+
+  createRoomId(){
+    return push(ref(this.realtimeDb,'Whiteboard')).key as string;
+  }
+
+  pushAllCurrentObjects(){
+    this.canvas.getObjects().forEach((obj)=>{
+
+      let pushRef=push(ref(this.realtimeDb,`Whiteboard/${this.roomId}/Added`));
+      
+      let key=pushRef.key as string;
+
+      let targetObject:any=obj;
+
+      targetObject.id=key;
+      targetObject.userId=this.userId;
+      targetObject.key=key;
+
+      console.log(targetObject,targetObject.toJSON(this.requiredKeys));
+
+      set(pushRef,targetObject.toJSON(this.requiredKeys));
+    })
   }
 
 
-  changeRoom(){
+  createRoom(){
+    this.userId=this.createUserId();
+    this.roomId=this.createRoomId();
+    this.pushAllCurrentObjects();
+    this.toolsList[this.toolsList.length-1].visibility=true;
+
+    const refresh = window.location.protocol + "//" + window.location.host + window.location.pathname + `?roomId=${this.roomId}`;    
+    window.history.replaceState({ path: refresh }, '', refresh);
+    //onDisconnect(ref(this.realtimeDb,`Whiteboard/${this.roomId}`)).set(null);
+
     this.unsubscribeSubscriptions();
     
     this.listenToObjectEvents();
 
     this.listenToPeerChanges();
 
+  }
+
+  endRoom(){
+    this.unsubscribeSubscriptions();
+    this.removeCanvasObjectEventListeners();
   }
 
 
@@ -606,6 +648,31 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
   selectTool(toolName:string){
     if(toolName=='info'){
+      return;
+    }
+
+    if(toolName==='share'){
+      if(!this.roomId){
+        this.createRoom();
+      }
+      this.toolsList[this.toolsList.length-2].toolTipText='Share Link';
+      navigator.clipboard.writeText(window.location.href);
+      
+      this.snackbard.open('Copied Link','OK',{
+        duration:2500,
+        horizontalPosition: 'right',
+        verticalPosition: 'top',
+      })
+      return;
+    }
+
+    if(toolName==='endSession'){
+      this.endRoom();
+      this.roomId='';
+      const refresh = window.location.protocol + "//" + window.location.host + window.location.pathname;    
+      window.history.replaceState({ path: refresh }, '', refresh);
+      this.toolsList[this.toolsList.length-2].toolTipText='Create Session';
+      this.toolsList[this.toolsList.length-1].visibility=false;
       return;
     }
 
