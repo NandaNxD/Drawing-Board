@@ -5,85 +5,101 @@
 //     // flex-direction: column;
 //     // gap:20px
 // }
-.drawing-board-parent{
-    width: 100%;
-    display: flex;
-    justify-content: center;
+.drawing-board-parent {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
-.tools{
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap:3rem;
-    margin-top: 10px;
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3rem;
+  margin-top: 10px;
 }
 
-
-
-.icon{
-    width: fit-content;
-    height: fit-content;
+.icon {
+  width: fit-content;
+  height: fit-content;
 }
 
-.icon:hover{
-    transform: scale(1.1);
+.icon:hover {
+  transform: scale(1.1);
 }
 
-.icon:active{
-    transform: scale(0.95);
+.icon:active {
+  transform: scale(0.95);
 }
 
-mat-icon{
-    font-size: 2rem;
-    overflow: visible;
+mat-icon {
+  font-size: 2rem;
+  overflow: visible;
 }
 
-.active-tool{
-    color:purple;
+.active-tool {
+  color: purple;
 }
 
-.sub-tools{
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap:30px;
-    flex-wrap: wrap;
+.sub-tools {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
 }
 
-.colors-container{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap:20px
+.colors-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
 }
 
-.colors{
-    width: 20px;
-    height: 20px;
-    display: block;
-    font-size: 2rem;
-    border-radius: 50%;
+.colors {
+  width: 20px;
+  height: 20px;
+  display: block;
+  font-size: 2rem;
+  border-radius: 50%;
 }
 
-.active-border{
-    border: 3px solid black;
+.transparent-color-button {
+    background: rgb(113, 111, 108);
+    color: white;
+    border: 0px;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+  }
+  
+  .transparent-color-button:hover {
+      transform: scale(1.02);
+  }
+  .transparent-color-button:active {
+      transform: scale(1.0);
+  }
+    
+    
+
+.active-border {
+  border: 3px solid black;
 }
 
-.inactive-border{
-    border: 1px dashed black;
+.inactive-border {
+  border: 1px dashed black;
 }
 
-.hidden{
-    display: none
+.hidden {
+  display: none;
 }
 
-.arrow-tool{
-    rotate: (45deg);
-    scale: 1.2;
+.arrow-tool {
+  rotate: (45deg);
+  scale: 1.2;
 }
 
-.red-color{
-    color:red;
+.red-color {
+  color: red;
 }
+

@@ -1,12 +1,9 @@
 import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
-import { withNoHttpTransferCache } from '@angular/platform-browser';
 import { fabric } from "fabric";
-import { log } from 'fabric/fabric-impl';
-import { v1 as uuid } from 'uuid'
 import { FirebaseApp, initializeApp } from 'firebase/app';
 import { Database, Unsubscribe, getDatabase, onChildAdded, onChildChanged, onDisconnect, push, ref, set} from 'firebase/database';
 import { FirebaseService } from '../services/firebase.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
@@ -140,9 +137,11 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
   rangeToolEnabled=false;
   colorsToolEnabled=false;
 
-  selectedBorderColor='blue';
-  selectedFillColor='blue';
-  selectedColor='blue';
+  selectedBorderColor='black';
+  selectedFillColor='black';
+  selectedColor='black';
+
+  transparentColor='rgba(0,0,0,0)';
 
   /**
    * Shape related Variables
@@ -697,6 +696,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.rangeToolEnabled=true;
       this.colorsToolEnabled=true;
       this.changeRangeLimits(this.pencilRangeMin,this.pencilRangeMax,this.pencilRangeValue);
+      if(this.selectedColor===this.transparentColor){
+        this.selectColor('black');
+      }
       this.setFreeDrawingBrushSettings(this.selectedColor,this.rangeValue);
     }
     else if(toolName==this.toolsList[2].toolName){
@@ -706,6 +708,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.canvas.isDrawingMode=false;
       this.rangeToolEnabled=true;
       this.colorsToolEnabled=true;
+      if(this.selectedColor===this.transparentColor){
+        this.selectColor('black');
+      }
       this.changeRangeLimits(this.textRangeMin,this.textRangeMax,this.textRangeValue);
       
     }
@@ -832,22 +837,16 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     }
     if(this.activeTool===this.toolsList[3].toolName){
       /**
-       * Text tool
-       */
-      this.selectedFillColor=color;
-    }
-    if(this.activeTool===this.toolsList[3].toolName){
-      /**
        * Fill Color tool
        */
       this.selectedFillColor=color;
       for(let activeObject of this.canvas.getActiveObjects()){
         let flag=0;
-        if(activeObject.type=='i-text'){
+        if(activeObject.type=='i-text' && color!==this.transparentColor){
           activeObject.set('fill',color);
           flag=1;
         }
-        if(activeObject.type=='path'){
+        if(activeObject.type=='path' && color!==this.transparentColor){
           activeObject.set('stroke',color);
           flag=1;
         }
@@ -869,6 +868,9 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       /**
        * Border Color tool
        */
+      if(color==this.transparentColor){
+        return;
+      }
       this.selectedBorderColor=color;
       for(let activeObject of this.canvas.getActiveObjects()){
         let flag=0;
@@ -891,10 +893,20 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       /**
        *  Fill Color Tool ||  Border Color tool => The colors displayed are fill color selection menu
        */
-      this.selectedBorderColor=color;
+
+      this.selectedFillColor=color;
     }
     this.selectedColor=color;
    
+  }
+
+  isTransparentColorAllowed(){
+    if(this.activeTool==='pencil' || this.activeTool=='text' || this.activeTool=='border_color'){
+      return false;
+    }
+    else{
+      return true;
+    }
   }
 
   rangeChange(){

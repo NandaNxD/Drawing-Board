@@ -9,6 +9,7 @@
       <input *ngIf="rangeToolEnabled" type="range" [min]="rangeMin" [max]="rangeMax" [(ngModel)]="rangeValue" (input)="rangeChange()"> 
       <div class="colors-container" *ngIf="colorsToolEnabled">
       <div *ngFor="let color of colors" fontIcon="circle" [ngStyle]="{'background':color}" [ngClass]="{'active-border':selectedColor===color,'inactive-border':selectedColor!==color}"  class="colors icon" (click)="selectColor(color)"></div>
+      <button class="transparent-color-button" (click)="selectColor(transparentColor)" *ngIf="isTransparentColorAllowed()" [ngClass]="{'active-border':selectedColor===transparentColor}">Transparent</button>
       </div>
       <input type="file" id="fileInput" class="hidden" (change)="handleFileInput($event)">
   </div>
