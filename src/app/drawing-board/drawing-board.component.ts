@@ -99,7 +99,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     {fontIcon:'download', toolTipText:'Download',toolName:'download',visibility:true},
     {fontIcon:'undo', toolTipText:'Undo',toolName:'undo',visibility:false},
     {fontIcon:'redo', toolTipText:'Redo',toolName:'redo',visibility:false},
-    {fontIcon:'info', toolTipText:'Press Alt Key+Drag to move canvas around',toolName:'info',visibility:false},
+    {fontIcon:'info', toolTipText:'Press Alt Key+ Drag With Select Tool to move canvas around',toolName:'info',visibility:true},
     {fontIcon:'share', toolTipText:'Create Session',toolName:'share',visibility:true},
     {fontIcon:'link_off', toolTipText:'End Session',toolName:'endSession',visibility:false},
   ]
