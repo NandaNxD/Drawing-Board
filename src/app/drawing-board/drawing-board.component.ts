@@ -13,7 +13,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 })
 export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
 
-  constructor(private firebaseService:FirebaseService,private activatedRoute:ActivatedRoute,private snackbard:MatSnackBar){
+  constructor(private firebaseService:FirebaseService,private activatedRoute:ActivatedRoute,private snackbar:MatSnackBar){
 
     if(activatedRoute.snapshot.queryParams['roomId']){
       this.roomId=activatedRoute.snapshot.queryParams['roomId'];
@@ -653,20 +653,34 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
     if(toolName==='share'){
       if(!this.roomId){
         this.createRoom();
+        this.snackbar.open('Session Started (Copied Link)','OK',{
+          duration:2500,
+          horizontalPosition: 'right',
+          verticalPosition: 'top',
+        })
+      }
+      else{
+        this.snackbar.open('Copied Link to Clipboard','OK',{
+          duration:2500,
+          horizontalPosition: 'right',
+          verticalPosition: 'top',
+        })
+
       }
       this.toolsList[this.toolsList.length-2].toolTipText='Share Link';
       navigator.clipboard.writeText(window.location.href);
-      
-      this.snackbard.open('Copied Link','OK',{
-        duration:2500,
-        horizontalPosition: 'right',
-        verticalPosition: 'top',
-      })
+   
+     
       return;
     }
 
     if(toolName==='endSession'){
       this.endRoom();
+      this.snackbar.open('Session Ended','OK',{
+        duration:2500,
+        horizontalPosition:'right',
+        verticalPosition:'top'
+      })
       this.roomId='';
       const refresh = window.location.protocol + "//" + window.location.host + window.location.pathname;    
       window.history.replaceState({ path: refresh }, '', refresh);
