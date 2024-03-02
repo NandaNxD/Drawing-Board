@@ -742,6 +742,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.canvas.isDrawingMode=false;
       this.rangeToolEnabled=true;
       this.colorsToolEnabled=true;
+      this.selectedColor=this.selectedFillColor;
       this.changeRangeLimits(this.shapeRangeMinValue,this.shapeRangeMaxValue,this.shapeRangeValue);
       this.canvas.discardActiveObject();
     }
@@ -755,6 +756,7 @@ export class DrawingBoardComponent implements OnInit,AfterViewInit,OnDestroy {
       this.canvas.isDrawingMode=false;
       this.rangeToolEnabled=true;
       this.colorsToolEnabled=true;
+      this.selectedColor=this.selectedFillColor;
       this.changeRangeLimits(this.shapeRangeMinValue,this.shapeRangeMaxValue,this.shapeRangeValue);
       this.canvas.discardActiveObject();
 
