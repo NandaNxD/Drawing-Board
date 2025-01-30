@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import Clarity from '@microsoft/clarity';
+import { environment } from 'src/environments/environment.development';
 
 @Component({
   selector: 'app-root',
@@ -8,6 +10,6 @@ import { Component } from '@angular/core';
 export class AppComponent {
   title = 'DrawBoard';
   constructor(){
-    
+    Clarity.init(environment.clarityProjectId);
   }
 }
